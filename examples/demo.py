@@ -4,12 +4,16 @@
 ## Copyright (C) 2013 Digia Plc and/or its subsidiary(-ies).
 ## Contact: http://www.qt-project.org/legal
 ##
+## Modifications Copyright (C) 2026 Manuel Alejandro Castro Fuentes 
+## Contact: <manuelcastr88@gmail.com>
+## Adaptations for PySide6 migration, refactoring, and enhancements.
+##
 ## This file is part of the Qt Solutions component.
 ##
 ## $QT_BEGIN_LICENSE:BSD$
 ## You may use this file under the terms of the BSD license as follows:
 ##
-## "Redistribution and use in source and binary forms, with or without
+## "Redistribution and use in source and binary formsith or without
 ## modification, are permitted provided that the following conditions are
 ## met:
 ##   * Redistributions of source code must retain the above copyright
@@ -38,65 +42,63 @@
 ## $QT_END_LICENSE$
 ##
 ############################################################################/
+import pathlib
 import sys
-import os
-filePath = os.path.dirname(os.path.abspath(__file__))
-print(filePath)
-sys.path.append(os.path.join(filePath,'QtProperty'))
-sys.path.append(os.path.join(filePath,'libqt5'))
-print(sys.path)
-from qtpy.QtWidgets import (
-    QApplication, 
-    QLabel, 
-    QScrollArea, 
-    QGridLayout, 
+
+from PySide6.QtWidgets import (
+    QApplication,
+    QLabel,
+    QScrollArea,
+    QGridLayout,
     QWidget,
-    QFrame
-    )
-from qtpy.QtCore import Qt
+    QFrame, QSpinBox, QDoubleSpinBox, QComboBox, QLineEdit, QSlider, QScrollBar
+)
+from PySide6.QtCore import Qt
 
-from pyqtcore import QMap, QList
-from qtpropertymanager import (
-    QtBoolPropertyManager, 
-    QtIntPropertyManager, 
-    QtStringPropertyManager, 
-    QtSizePropertyManager, 
-    QtRectPropertyManager, 
-    QtSizePolicyPropertyManager, 
-    QtEnumPropertyManager, 
-    QtGroupPropertyManager
-    )
-from qteditorfactory import (
-    QtCheckBoxFactory, 
-    QtSpinBoxFactory, 
-    QtSliderFactory, 
-    QtScrollBarFactory, 
-    QtLineEditFactory, 
-    QtEnumEditorFactory
-    )
+from qtpropertybrowser.editor_widgets import QtFontEdit, QtBoolEdit
+from qtpropertybrowser.property_managers import QtGroupPropertyManager, QtBoolPropertyManager, QtIntPropertyManager, \
+    QtStringPropertyManager, QtSizePropertyManager, QtEnumPropertyManager, QtSizePolicyPropertyManager, \
+    QtRectPropertyManager, QtCursorPropertyManager, QtFontPropertyManager, QtPointFPropertyManager
+from qtpropertybrowser.editor_factories import QtSpinBoxFactory, QtCheckBoxFactory, QtEnumEditorFactory, \
+    QtLineEditFactory, QtSliderFactory, QtScrollBarFactory, QtCursorEditorFactory, QtFontEditorFactory, \
+    QtDoubleSpinBoxFactory
 
-from qttreepropertybrowser import QtTreePropertyBrowser
-from qtgroupboxpropertybrowser import QtGroupBoxPropertyBrowser
-from qtbuttonpropertybrowser import QtButtonPropertyBrowser
+from qtpropertybrowser.tree_property_browser import QtTreePropertyBrowser
+from qtpropertybrowser.groupbox_property_browser import QtGroupBoxPropertyBrowser
+from qtpropertybrowser.qtbuttonpropertybrowser import QtButtonPropertyBrowser
 
-from qtpy.QtGui import QIcon
-import demo_rc
+from PySide6.QtGui import QIcon
+import demo_rc  # noqa
+
+import os
+os.environ['QT_LOGGING_RULES'] = '*.debug=true'
+os.environ['QT_DEBUG_PLUGINS'] = '1'
+
+log_path = pathlib.Path('./debug.log')
+log_path.unlink(missing_ok=True)
+
+from debug_utils import logger  # noqa
 
 if __name__ == '__main__':
-    app = QApplication(sys.argv)
+    args = sys.argv + ['-platform', 'windows:darkmode=0']
+    app = QApplication(args)
+
+    app.setStyle('Fusion')
 
     w = QWidget()
 
-    boolManager = QtBoolPropertyManager(w)
-    intManager = QtIntPropertyManager(w)
-    stringManager = QtStringPropertyManager(w)
-    sizeManager = QtSizePropertyManager(w)
-    rectManager = QtRectPropertyManager(w)
-    sizePolicyManager = QtSizePolicyPropertyManager(w)
-    enumManager = QtEnumPropertyManager(w)
-    groupManager = QtGroupPropertyManager(w)
+    boolManager = QtBoolPropertyManager('QtBoolPropertyManager')
+    intManager = QtIntPropertyManager('QtIntPropertyManager')
+    stringManager = QtStringPropertyManager('QtStringPropertyManager')
+    sizeManager = QtSizePropertyManager('QtSizePropertyManager')
+    rectManager = QtRectPropertyManager('QtRectPropertyManager')
+    sizePolicyManager = QtSizePolicyPropertyManager('QtSizePolicyPropertyManager')
+    enumManager = QtEnumPropertyManager('QtEnumPropertyManager')
+    groupManager = QtGroupPropertyManager('QtGroupPropertyManager')
 
     item0 = groupManager.addProperty("QObject")
+    item00 = groupManager.addProperty('Empty Group')
+    item0.addSubProperty(item00)
 
     item1 = stringManager.addProperty("objectName")
     item0.addSubProperty(item1)
@@ -117,14 +119,14 @@ if __name__ == '__main__':
     item0.addSubProperty(item7)
 
     item8 = enumManager.addProperty("direction")
-    enumNames = QList()
+    enumNames = list()
     enumNames.append("Up")
     enumNames.append("Right")
     enumNames.append("Down")
     enumNames.append("Left")
 
     enumManager.setEnumNames(item8, enumNames)
-    enumIcons = QMap()
+    enumIcons = dict()
     enumIcons[0] = QIcon(":/demo/images/up.png")
     enumIcons[1] = QIcon(":/demo/images/right.png")
     enumIcons[2] = QIcon(":/demo/images/down.png")
@@ -132,26 +134,57 @@ if __name__ == '__main__':
     enumManager.setEnumIcons(item8, enumIcons)
     item0.addSubProperty(item8)
 
+    item8a = stringManager.addProperty("Sub direction")
+    item8a.setValue('Some text')
+    item8.addSubProperty(item8a)
+    def f8(p, value: int):
+        item8a.setValue(enumManager.enumNames(item8)[value])
+    item8.valueChanged.connect(f8)
+
     item9 = intManager.addProperty("value")
     intManager.setRange(item9, -100, 100)
     item0.addSubProperty(item9)
 
-    checkBoxFactory = QtCheckBoxFactory(w)
-    spinBoxFactory = QtSpinBoxFactory(w)
-    sliderFactory = QtSliderFactory(w)
-    scrollBarFactory = QtScrollBarFactory(w)
-    lineEditFactory = QtLineEditFactory(w)
-    comboBoxFactory = QtEnumEditorFactory(w)
+    # from qtpropertybrowser.qt_cursor_manager_and_factory import QtCursorPropertyManager
+    cursor_manager = QtCursorPropertyManager('QtCursorPropertyManager')
+    item10 = cursor_manager.addProperty('Cursors')
+    item0.addSubProperty(item10)
+
+    font_manager = QtFontPropertyManager('QtFontPropertyManager')
+    item11 = font_manager.addProperty('A font')
+    item0.addSubProperty(item11)
+
+    point_f_manager = QtPointFPropertyManager('QtPointFPropertyManager')
+    item12 = point_f_manager.addProperty('PointF')
+    point_f_manager.setDecimals(item12, 2)
+    item0.addSubProperty(item12)
+
+    checkBoxFactory = QtCheckBoxFactory(QtBoolEdit)
+    spinBoxFactory = QtSpinBoxFactory(QSpinBox)
+    sliderFactory = QtSliderFactory(QSlider)
+    scrollBarFactory = QtScrollBarFactory(QScrollBar)
+    lineEditFactory = QtLineEditFactory(QLineEdit)
+    comboBoxFactory = QtEnumEditorFactory(QComboBox)
+    cursor_factory = QtCursorEditorFactory(QComboBox)
+    font_factory = QtFontEditorFactory(QtFontEdit)
+    float_factory = QtDoubleSpinBoxFactory(QDoubleSpinBox)
 
     editor1 = QtTreePropertyBrowser()
     editor1.setFactoryForManager(boolManager, checkBoxFactory)
     editor1.setFactoryForManager(intManager, spinBoxFactory)
     editor1.setFactoryForManager(stringManager, lineEditFactory)
-    editor1.setFactoryForManager(sizeManager.subIntPropertyManager(), spinBoxFactory)
+    editor1.setFactoryForManager(sizeManager.subPropertyManager(), spinBoxFactory)
     editor1.setFactoryForManager(rectManager.subIntPropertyManager(), spinBoxFactory)
     editor1.setFactoryForManager(sizePolicyManager.subIntPropertyManager(), spinBoxFactory)
     editor1.setFactoryForManager(sizePolicyManager.subEnumPropertyManager(), comboBoxFactory)
     editor1.setFactoryForManager(enumManager, comboBoxFactory)
+    editor1.setFactoryForManager(cursor_manager, cursor_factory)
+
+    editor1.setFactoryForManager(font_manager, font_factory)
+    editor1.setFactoryForManager(font_manager.subBoolPropertyManager(), checkBoxFactory)
+    editor1.setFactoryForManager(font_manager.subIntPropertyManager(), spinBoxFactory)
+    editor1.setFactoryForManager(font_manager.subEnumPropertyManager(), comboBoxFactory)
+    editor1.setFactoryForManager(point_f_manager.subPropertyManager(), float_factory)
 
     editor1.addProperty(item0)
 
@@ -162,11 +195,18 @@ if __name__ == '__main__':
     editor3.setFactoryForManager(boolManager, checkBoxFactory)
     editor3.setFactoryForManager(intManager, spinBoxFactory)
     editor3.setFactoryForManager(stringManager, lineEditFactory)
-    editor3.setFactoryForManager(sizeManager.subIntPropertyManager(), spinBoxFactory)
+    editor3.setFactoryForManager(sizeManager.subPropertyManager(), spinBoxFactory)
     editor3.setFactoryForManager(rectManager.subIntPropertyManager(), spinBoxFactory)
     editor3.setFactoryForManager(sizePolicyManager.subIntPropertyManager(), spinBoxFactory)
     editor3.setFactoryForManager(sizePolicyManager.subEnumPropertyManager(), comboBoxFactory)
     editor3.setFactoryForManager(enumManager, comboBoxFactory)
+    editor3.setFactoryForManager(cursor_manager, cursor_factory)
+
+    editor3.setFactoryForManager(font_manager, font_factory)
+    editor3.setFactoryForManager(font_manager.subBoolPropertyManager(), checkBoxFactory)
+    editor3.setFactoryForManager(font_manager.subIntPropertyManager(), scrollBarFactory)
+    editor3.setFactoryForManager(font_manager.subEnumPropertyManager(), comboBoxFactory)
+    editor3.setFactoryForManager(point_f_manager.subPropertyManager(), float_factory)
 
     editor3.addProperty(item0)
 
@@ -178,11 +218,13 @@ if __name__ == '__main__':
     editor4.setFactoryForManager(boolManager, checkBoxFactory)
     editor4.setFactoryForManager(intManager, scrollBarFactory)
     editor4.setFactoryForManager(stringManager, lineEditFactory)
-    editor4.setFactoryForManager(sizeManager.subIntPropertyManager(), spinBoxFactory)
+    editor4.setFactoryForManager(sizeManager.subPropertyManager(), spinBoxFactory)
     editor4.setFactoryForManager(rectManager.subIntPropertyManager(), spinBoxFactory)
     editor4.setFactoryForManager(sizePolicyManager.subIntPropertyManager(), sliderFactory)
     editor4.setFactoryForManager(sizePolicyManager.subEnumPropertyManager(), comboBoxFactory)
     editor4.setFactoryForManager(enumManager, comboBoxFactory)
+    editor4.setFactoryForManager(cursor_manager, cursor_factory)
+    editor4.setFactoryForManager(point_f_manager.subPropertyManager(), float_factory)
 
     editor4.addProperty(item0)
 
@@ -194,11 +236,14 @@ if __name__ == '__main__':
     editor5.setFactoryForManager(boolManager, checkBoxFactory)
     editor5.setFactoryForManager(intManager, scrollBarFactory)
     editor5.setFactoryForManager(stringManager, lineEditFactory)
-    editor5.setFactoryForManager(sizeManager.subIntPropertyManager(), spinBoxFactory)
+    editor5.setFactoryForManager(sizeManager.subPropertyManager(), spinBoxFactory)
     editor5.setFactoryForManager(rectManager.subIntPropertyManager(), spinBoxFactory)
     editor5.setFactoryForManager(sizePolicyManager.subIntPropertyManager(), sliderFactory)
     editor5.setFactoryForManager(sizePolicyManager.subEnumPropertyManager(), comboBoxFactory)
     editor5.setFactoryForManager(enumManager, comboBoxFactory)
+    editor5.setFactoryForManager(cursor_manager, cursor_factory)
+
+    editor5.setFactoryForManager(point_f_manager.subPropertyManager(), float_factory)
 
     editor5.addProperty(item0)
 
@@ -217,21 +262,21 @@ if __name__ == '__main__':
     label3.setWordWrap(True)
     label4.setWordWrap(True)
     label5.setWordWrap(True)
-    label1.setFrameShadow(QFrame.Sunken)
-    label2.setFrameShadow(QFrame.Sunken)
-    label3.setFrameShadow(QFrame.Sunken)
-    label4.setFrameShadow(QFrame.Sunken)
-    label5.setFrameShadow(QFrame.Sunken)
-    label1.setFrameShape(QFrame.Panel)
-    label2.setFrameShape(QFrame.Panel)
-    label3.setFrameShape(QFrame.Panel)
-    label4.setFrameShape(QFrame.Panel)
-    label5.setFrameShape(QFrame.Panel)
-    label1.setAlignment(Qt.AlignCenter)
-    label2.setAlignment(Qt.AlignCenter)
-    label3.setAlignment(Qt.AlignCenter)
-    label4.setAlignment(Qt.AlignCenter)
-    label5.setAlignment(Qt.AlignCenter)
+    label1.setFrameShadow(QFrame.Shadow.Sunken)
+    label2.setFrameShadow(QFrame.Shadow.Sunken)
+    label3.setFrameShadow(QFrame.Shadow.Sunken)
+    label4.setFrameShadow(QFrame.Shadow.Sunken)
+    label5.setFrameShadow(QFrame.Shadow.Sunken)
+    label1.setFrameShape(QFrame.Shape.Panel)
+    label2.setFrameShape(QFrame.Shape.Panel)
+    label3.setFrameShape(QFrame.Shape.Panel)
+    label4.setFrameShape(QFrame.Shape.Panel)
+    label5.setFrameShape(QFrame.Shape.Panel)
+    label1.setAlignment(Qt.AlignmentFlag.AlignCenter)
+    label2.setAlignment(Qt.AlignmentFlag.AlignCenter)
+    label3.setAlignment(Qt.AlignmentFlag.AlignCenter)
+    label4.setAlignment(Qt.AlignmentFlag.AlignCenter)
+    label5.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
     layout.addWidget(label1, 0, 0)
     layout.addWidget(label2, 0, 1)
@@ -243,7 +288,7 @@ if __name__ == '__main__':
     layout.addWidget(scroll3, 1, 2)
     layout.addWidget(scroll4, 1, 3)
     layout.addWidget(scroll5, 1, 4)
-    w.showMaximized()
+    # w.showMaximized()
     w.show()
 
-    sys.exit(app.exec_())
+    sys.exit(app.exec())

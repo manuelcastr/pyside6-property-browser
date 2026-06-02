@@ -5,8 +5,10 @@
 # Created by: The Resource Compiler for qtpy (Qt v5.4.1)
 #
 # WARNING! All changes made in this file will be lost!
+#
+# Modified later, changed dependencies to PySide6
 
-from qtpy import QtCore
+from PySide6 import QtCore
 
 qt_resource_data = b"\
 \x00\x00\x00\xa0\

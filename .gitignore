@@ -1,1 +1,6 @@
 __pycache__
+*.pyc
+*.egg-info/
+src/qtpropertybrowser/qtpropertybrowser_rc.py
+.idea/
+*.egg-link
